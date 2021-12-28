@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from mmcv.runner.fp16_utils import force_fp32
 from mmdet.core import bbox2roi, multi_apply
 from mmdet.models import DETECTORS, build_detector
@@ -106,20 +107,20 @@ class SoftTeacher(MultiSteamDetector):
         else:
             proposals = student_info["proposals"]
 
-        loss.update(
-            self.unsup_rcnn_cls_loss(
-                student_info["backbone_feature"],
-                student_info["img_metas"],
-                proposals,
-                pseudo_bboxes,
-                pseudo_labels,
-                teacher_info["transform_matrix"],
-                student_info["transform_matrix"],
-                teacher_info["img_metas"],
-                teacher_info["backbone_feature"],
-                student_info=student_info,
-            )
-        )
+        # loss.update(
+        #     self.unsup_rcnn_cls_loss(
+        #         student_info["backbone_feature"],
+        #         student_info["img_metas"],
+        #         proposals,
+        #         pseudo_bboxes,
+        #         pseudo_labels,
+        #         teacher_info["transform_matrix"],
+        #         student_info["transform_matrix"],
+        #         teacher_info["img_metas"],
+        #         teacher_info["backbone_feature"],
+        #         student_info=student_info,
+        #     )
+        # )
         loss.update(
             self.unsup_rcnn_reg_loss(
                 student_info["backbone_feature"],
@@ -279,7 +280,7 @@ class SoftTeacher(MultiSteamDetector):
         )
         loss_bbox = self.student.roi_head.forward_train(
             feat, img_metas, proposal_list, gt_bboxes, gt_labels, **kwargs
-        )["loss_bbox"]
+        )
         if len(gt_bboxes[0]) > 0:
             log_image_with_boxes(
                 "rcnn_reg",
@@ -291,7 +292,7 @@ class SoftTeacher(MultiSteamDetector):
                 interval=500,
                 img_norm_cfg=student_info["img_metas"][0]["img_norm_cfg"],
             )
-        return {"loss_bbox": loss_bbox}
+        return loss_bbox
 
     def get_sampling_result(
         self,
@@ -360,9 +361,23 @@ class SoftTeacher(MultiSteamDetector):
             proposal_list = proposals
         teacher_info["proposals"] = proposal_list
 
-        proposal_list, proposal_label_list = self.teacher.roi_head.simple_test_bboxes(
-            feat, img_metas, proposal_list, self.teacher.test_cfg.rcnn, rescale=False
+        proposal_list = self.teacher.roi_head.simple_test(
+            feat, img_metas, proposal_list, rescale=False
         )
+
+        # to be compatible with CascadeRCNN
+        faster_like_det = []
+        proposal_label_list = []
+        for img_res in proposal_list:
+            preds = torch.tensor(np.vstack(img_res))
+            faster_like_det.append(preds)
+            cls_list = torch.zeros(preds.shape[0], dtype=torch.long)
+            ptr = 0
+            for idx, cls in enumerate(img_res):
+                cls_list[ptr:ptr + len(cls)] = idx
+                ptr = ptr + len(cls)
+            proposal_label_list.append(cls_list)
+        proposal_list = faster_like_det
 
         proposal_list = [p.to(feat[0].device) for p in proposal_list]
         proposal_list = [
