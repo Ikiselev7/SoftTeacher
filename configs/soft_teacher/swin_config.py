@@ -475,7 +475,7 @@ data = dict(
             sample_ratio=[1, 4],
             by_prob=True,
             # at_least_one=True,
-            epoch_length=7330,
+            epoch_length=4000,
         )
     )
 )
@@ -519,6 +519,6 @@ log_config = dict(
     ],
 )
 
-evaluation = dict(type="SubModulesDistEvalHook", metric=['bbox'], classwise=True)
+evaluation = dict(type="SubModulesDistEvalHook", interval=4000, metric=['bbox'], classwise=True)
 work_dir = '/content/drive/MyDrive/cascade/wd_swin_st'
 gpu_ids = range(0, 1)

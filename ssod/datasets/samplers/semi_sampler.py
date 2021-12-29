@@ -22,7 +22,7 @@ class DistributedGroupSemiBalanceSampler(Sampler):
         **kwargs
     ):
         # check to avoid some problem
-        assert samples_per_gpu > 1, "samples_per_gpu should be greater than 1."
+        # assert samples_per_gpu > 1, "samples_per_gpu should be greater than 1."
         _rank, _num_replicas = get_dist_info()
         if num_replicas is None:
             num_replicas = _num_replicas
@@ -184,7 +184,7 @@ class DistributedGroupSemiBalanceSampler(Sampler):
 
         offset = len(self) * self.rank
         indices = indices[offset : offset + len(self)]
-        assert len(indices) == len(self)
+        # assert len(indices) == len(self)
         return iter(indices)
 
     def __len__(self):
