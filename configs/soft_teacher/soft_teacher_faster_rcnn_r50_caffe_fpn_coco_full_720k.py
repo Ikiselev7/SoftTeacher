@@ -20,7 +20,7 @@ data = dict(
         unsup=dict(
 
             ann_file='/content/drive/MyDrive/sartorius/unsup_dataset_1.json',
-            img_prefix='/content/train/',
+            img_prefix='/content/train_semi_supervised/',
 
         ),
     ),
