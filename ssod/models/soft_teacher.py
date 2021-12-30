@@ -362,7 +362,7 @@ class SoftTeacher(MultiSteamDetector):
         teacher_info["proposals"] = proposal_list
 
         proposal_list = self.teacher.roi_head.simple_test(
-            feat, img_metas, proposal_list, rescale=False
+            feat, proposal_list, img_metas, rescale=False
         )
 
         # to be compatible with CascadeRCNN
@@ -434,13 +434,20 @@ class SoftTeacher(MultiSteamDetector):
             auged.reshape(-1, auged.shape[-1]) for auged in auged_proposal_list
         ]
 
-        bboxes, _ = self.teacher.roi_head.simple_test_bboxes(
+        bboxes = self.teacher.roi_head.simple_test(
             feat,
-            img_metas,
             auged_proposal_list,
+            img_metas,
             None,
             rescale=False,
         )
+        # to be compatible with CascadeRCNN
+        faster_like_det = []
+        proposal_label_list = []
+        for img_res in bboxes:
+            preds = torch.tensor(np.vstack(img_res))
+            faster_like_det.append(preds)
+        bboxes = faster_like_det
         reg_channel = max([bbox.shape[-1] for bbox in bboxes]) // 4
         bboxes = [
             bbox.reshape(self.train_cfg.jitter_times, -1, bbox.shape[-1])
