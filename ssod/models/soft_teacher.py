@@ -399,8 +399,11 @@ class SoftTeacher(MultiSteamDetector):
             torch.cat([bbox, unc], dim=-1) for bbox, unc in zip(det_bboxes, reg_unc)
         ]
         det_labels = proposal_label_list
+        # segm_results = self.teacher.roi_head.simple_test_mask(
+        #     feat, img_metas, det_bboxes, det_labels, rescale=False)
         teacher_info["det_bboxes"] = det_bboxes
         teacher_info["det_labels"] = det_labels
+        # teacher_info["segm_results"] = segm_results
         teacher_info["transform_matrix"] = [
             torch.from_numpy(meta["transform_matrix"]).float().to(feat[0][0].device)
             for meta in img_metas
