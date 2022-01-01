@@ -296,6 +296,11 @@ data = dict(
                         dict(
                             type='Sequential',
                             transforms=[
+                                dict(
+                                    type='RandResize',
+                                    img_scale=[(704, 520), (704, 520)],
+                                    multiscale_mode='range',
+                                    keep_ratio=True),
                                 dict(type='RandFlip', flip_ratio=0.5),
                                 dict(
                                     type='ShuffledSequential',
@@ -362,6 +367,11 @@ data = dict(
                         dict(
                             type='Sequential',
                             transforms=[
+                                dict(
+                                    type='RandResize',
+                                    img_scale=[(704, 520), (704, 520)],
+                                    multiscale_mode='range',
+                                    keep_ratio=True),
                                 dict(type='RandFlip', flip_ratio=0.5)
                             ],
                             record=True),

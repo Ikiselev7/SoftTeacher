@@ -2,6 +2,7 @@ import torch
 from mmcv.runner.fp16_utils import force_fp32
 from mmdet.core import bbox2roi, multi_apply
 from mmdet.models import DETECTORS, build_detector
+from mmdet.core.mask.structures import BitmapMasks
 
 from ssod.utils.structure_utils import dict_split, weighted_loss
 from ssod.utils import log_image_with_boxes, log_every_n
@@ -87,6 +88,12 @@ class SoftTeacher(MultiSteamDetector):
             [meta["img_shape"] for meta in student_info["img_metas"]],
         )
         pseudo_labels = teacher_info["det_labels"]
+        pseudo_masks = Transform2D.transform_masks(
+            teacher_info["segm_results"],
+            M,
+            [meta["img_shape"][:2] for meta in student_info["img_metas"]],
+        )
+
         loss = {}
         rpn_loss, proposal_list = self.rpn_loss(
             student_info["rpn_out"],
@@ -127,6 +134,7 @@ class SoftTeacher(MultiSteamDetector):
                 proposals,
                 pseudo_bboxes,
                 pseudo_labels,
+                pseudo_masks,
                 student_info=student_info,
             )
         )
@@ -264,22 +272,26 @@ class SoftTeacher(MultiSteamDetector):
         proposal_list,
         pseudo_bboxes,
         pseudo_labels,
+        pseudo_masks,
         student_info=None,
         **kwargs,
     ):
-        gt_bboxes, gt_labels, _ = multi_apply(
+        gt_bboxes, gt_labels, gt_masks = multi_apply(
             filter_invalid,
             [bbox[:, :4] for bbox in pseudo_bboxes],
             pseudo_labels,
-            [-bbox[:, 5:].mean(dim=-1) for bbox in pseudo_bboxes],
-            thr=-self.train_cfg.reg_pseudo_threshold,
+            [bbox[:, 4] for bbox in pseudo_bboxes],
+            pseudo_masks,
+            thr=self.train_cfg.cls_pseudo_threshold,
         )
         log_every_n(
             {"rcnn_reg_gt_num": sum([len(bbox) for bbox in gt_bboxes]) / len(gt_bboxes)}
         )
-        loss_bbox = self.student.roi_head.forward_train(
-            feat, img_metas, proposal_list, gt_bboxes, gt_labels, **kwargs
-        )["loss_bbox"]
+        res = self.student.roi_head.forward_train(
+            feat, img_metas, proposal_list, gt_bboxes, gt_labels, gt_masks, **kwargs
+        )
+        loss_bbox = res["loss_bbox"]
+        loss_mask = ["loss_mask"]
         if len(gt_bboxes[0]) > 0:
             log_image_with_boxes(
                 "rcnn_reg",
@@ -291,7 +303,7 @@ class SoftTeacher(MultiSteamDetector):
                 interval=500,
                 img_norm_cfg=student_info["img_metas"][0]["img_norm_cfg"],
             )
-        return {"loss_bbox": loss_bbox}
+        return {"loss_bbox": loss_bbox, "loss_mask": loss_mask}
 
     def get_sampling_result(
         self,
@@ -399,11 +411,18 @@ class SoftTeacher(MultiSteamDetector):
             torch.cat([bbox, unc], dim=-1) for bbox, unc in zip(det_bboxes, reg_unc)
         ]
         det_labels = proposal_label_list
-        # segm_results = self.teacher.roi_head.simple_test_mask(
-        #     feat, img_metas, det_bboxes, det_labels, rescale=False)
+        segm_results = self.teacher.roi_head.simple_test_mask(
+            feat, img_metas, det_bboxes, det_labels, rescale=False)
+        s_rs = []
+        for res in segm_results:
+            coll = []
+            for r in res:
+                coll.extend(r)
+            s_rs.append(coll)
+        segm_res = [BitmapMasks(res, img_metas[idx]['img_shape'][0], img_metas[idx]['img_shape'][1]) for idx, res in enumerate(s_rs)]
         teacher_info["det_bboxes"] = det_bboxes
         teacher_info["det_labels"] = det_labels
-        # teacher_info["segm_results"] = segm_results
+        teacher_info["segm_results"] = segm_res
         teacher_info["transform_matrix"] = [
             torch.from_numpy(meta["transform_matrix"]).float().to(feat[0][0].device)
             for meta in img_metas
