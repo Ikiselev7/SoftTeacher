@@ -70,7 +70,7 @@ class SoftTeacher(MultiSteamDetector):
                 [teacher_data["img_metas"][idx] for idx in tidx],
                 [teacher_data["proposals"][idx] for idx in tidx]
                 if ("proposals" in teacher_data)
-                and (teacher_data["proposals"] is not None)
+                   and (teacher_data["proposals"] is not None)
                 else None,
             )
         student_info = self.extract_student_info(**student_data)
@@ -141,13 +141,13 @@ class SoftTeacher(MultiSteamDetector):
         return loss
 
     def rpn_loss(
-        self,
-        rpn_out,
-        pseudo_bboxes,
-        img_metas,
-        gt_bboxes_ignore=None,
-        student_info=None,
-        **kwargs,
+            self,
+            rpn_out,
+            pseudo_bboxes,
+            img_metas,
+            gt_bboxes_ignore=None,
+            student_info=None,
+            **kwargs,
     ):
         if self.student.with_rpn:
             gt_bboxes = []
@@ -155,8 +155,8 @@ class SoftTeacher(MultiSteamDetector):
                 bbox, _, _ = filter_invalid(
                     bbox[:, :4],
                     score=bbox[
-                        :, 4
-                    ],  # TODO: replace with foreground score, here is classification score,
+                          :, 4
+                          ],  # TODO: replace with foreground score, here is classification score,
                     thr=self.train_cfg.rpn_pseudo_threshold,
                     min_size=self.train_cfg.min_pseduo_box_size,
                 )
@@ -188,18 +188,18 @@ class SoftTeacher(MultiSteamDetector):
             return {}, None
 
     def unsup_rcnn_cls_loss(
-        self,
-        feat,
-        img_metas,
-        proposal_list,
-        pseudo_bboxes,
-        pseudo_labels,
-        teacher_transMat,
-        student_transMat,
-        teacher_img_metas,
-        teacher_feat,
-        student_info=None,
-        **kwargs,
+            self,
+            feat,
+            img_metas,
+            proposal_list,
+            pseudo_bboxes,
+            pseudo_labels,
+            teacher_transMat,
+            student_transMat,
+            teacher_img_metas,
+            teacher_feat,
+            student_info=None,
+            **kwargs,
     ):
         gt_bboxes, gt_labels, _ = multi_apply(
             filter_invalid,
@@ -266,15 +266,15 @@ class SoftTeacher(MultiSteamDetector):
         return loss
 
     def unsup_rcnn_reg_loss(
-        self,
-        feat,
-        img_metas,
-        proposal_list,
-        pseudo_bboxes,
-        pseudo_labels,
-        pseudo_masks,
-        student_info=None,
-        **kwargs,
+            self,
+            feat,
+            img_metas,
+            proposal_list,
+            pseudo_bboxes,
+            pseudo_labels,
+            pseudo_masks,
+            student_info=None,
+            **kwargs,
     ):
         gt_bboxes, gt_labels, gt_masks = multi_apply(
             filter_invalid,
@@ -287,11 +287,14 @@ class SoftTeacher(MultiSteamDetector):
         log_every_n(
             {"rcnn_reg_gt_num": sum([len(bbox) for bbox in gt_bboxes]) / len(gt_bboxes)}
         )
+        # import pdb
+        # if gt_bboxes[0].shape[0] == 0:
+        #     pdb.set_trace()
         res = self.student.roi_head.forward_train(
-            feat, img_metas, proposal_list, gt_bboxes, gt_labels, gt_masks, **kwargs
+            feat, img_metas, proposal_list, gt_bboxes, gt_labels, gt_masks=gt_masks, **kwargs
         )
         loss_bbox = res["loss_bbox"]
-        loss_mask = ["loss_mask"]
+        loss_mask = res["loss_mask"]
         if len(gt_bboxes[0]) > 0:
             log_image_with_boxes(
                 "rcnn_reg",
@@ -306,13 +309,13 @@ class SoftTeacher(MultiSteamDetector):
         return {"loss_bbox": loss_bbox, "loss_mask": loss_mask}
 
     def get_sampling_result(
-        self,
-        img_metas,
-        proposal_list,
-        gt_bboxes,
-        gt_labels,
-        gt_bboxes_ignore=None,
-        **kwargs,
+            self,
+            img_metas,
+            proposal_list,
+            gt_bboxes,
+            gt_labels,
+            gt_bboxes_ignore=None,
+            **kwargs,
     ):
         num_imgs = len(img_metas)
         if gt_bboxes_ignore is None:
@@ -431,7 +434,7 @@ class SoftTeacher(MultiSteamDetector):
         return teacher_info
 
     def compute_uncertainty_with_aug(
-        self, feat, img_metas, proposal_list, proposal_label_list
+            self, feat, img_metas, proposal_list, proposal_label_list
     ):
         auged_proposal_list = self.aug_box(
             proposal_list, self.train_cfg.jitter_times, self.train_cfg.jitter_scale
@@ -495,8 +498,8 @@ class SoftTeacher(MultiSteamDetector):
             aug_scale = box_scale * frac  # [n,4]
 
             offset = (
-                torch.randn(times, box.shape[0], 4, device=box.device)
-                * aug_scale[None, ...]
+                    torch.randn(times, box.shape[0], 4, device=box.device)
+                    * aug_scale[None, ...]
             )
             new_box = box.clone()[None, ...].expand(times, box.shape[0], -1)
             return torch.cat(
@@ -506,14 +509,14 @@ class SoftTeacher(MultiSteamDetector):
         return [_aug_single(box) for box in boxes]
 
     def _load_from_state_dict(
-        self,
-        state_dict,
-        prefix,
-        local_metadata,
-        strict,
-        missing_keys,
-        unexpected_keys,
-        error_msgs,
+            self,
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
     ):
         if not any(["student" in key or "teacher" in key for key in state_dict.keys()]):
             keys = list(state_dict.keys())

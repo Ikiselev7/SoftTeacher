@@ -498,3 +498,4 @@ fp16 = dict(loss_scale='dynamic')
 work_dir = './work_dirs/soft_teacher_faster_rcnn_r50_caffe_fpn_coco_full_720k'
 cfg_name = 'soft_teacher_faster_rcnn_r50_caffe_fpn_coco_full_720k'
 gpu_ids = range(0, 1)
+find_unused_parameters=True
