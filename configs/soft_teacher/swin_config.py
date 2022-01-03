@@ -444,7 +444,7 @@ data = dict(
         ]),
     sampler=dict(
         train=dict(
-            type='SemiBalanceSampler',
+            type='GroupSampler',
             sample_ratio=[1, 1],
             by_prob=True,
             epoch_length=2500)))
