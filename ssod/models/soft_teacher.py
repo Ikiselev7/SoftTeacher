@@ -422,24 +422,29 @@ class SoftTeacher(MultiSteamDetector):
             for r in res:
                 coll.extend(r)
             s_rs.append(coll)
-        lbls = [dl.detach().cpu().numpy() for dl in det_labels]
+        lbls = [dl.detach().cpu().numpy().astype(int) for dl in det_labels]
         det_like_segm = []
         cls_like_segm = []
-        for det_bb in det_bboxes:
+        for det_bb, det_lb in zip(det_bboxes, det_labels):
             bb = det_bb.detach().cpu().numpy()
+            lb = det_lb.detach().cpu().numpy()
             det_like = [[] for _ in range(self.teacher.roi_head.bbox_head.num_classes)]
             for i in range(len(bb)):
-                det_like[lbls[i]].append(bb[i])
+                det_like[lb[i]].append(bb[i])
             clss = []
             coll = []
             for idx, r in enumerate(det_like):
                 coll.extend(r)
                 clss.extend([idx for _ in range(len(r))])
+            # if not coll:
+            #     det_like_segm.append(det_bb)
+            #     cls_like_segm.append(det_lb)
             det_like_segm.append(torch.tensor(coll).to(feat[0].device))
             cls_like_segm.append(torch.tensor(clss).to(feat[0].device))
+
         segm_res = [BitmapMasks(res, img_metas[idx]['img_shape'][0], img_metas[idx]['img_shape'][1]) for idx, res in enumerate(s_rs)]
-        teacher_info["det_bboxes"] = det_like_segm
-        teacher_info["det_labels"] = cls_like_segm
+        teacher_info["det_bboxes"] = det_like_segm if det_like_segm[0].shape != 0 else det_bboxes
+        teacher_info["det_labels"] = cls_like_segm if cls_like_segm[0].shape != 0 else det_labels
         teacher_info["segm_results"] = segm_res
         teacher_info["transform_matrix"] = [
             torch.from_numpy(meta["transform_matrix"]).float().to(feat[0][0].device)
