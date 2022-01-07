@@ -434,17 +434,17 @@ class SoftTeacher(MultiSteamDetector):
             clss = []
             coll = []
             for idx, r in enumerate(det_like):
-                coll.extend(r)
-                clss.extend([idx for _ in range(len(r))])
+                if r and len(r) != 0:
+                    coll.extend(r)
+                    clss.extend([idx for _ in range(len(r))])
             # if not coll:
             #     det_like_segm.append(det_bb)
             #     cls_like_segm.append(det_lb)
             det_like_segm.append(torch.tensor(coll).to(feat[0].device))
             cls_like_segm.append(torch.tensor(clss).to(feat[0].device))
-
         segm_res = [BitmapMasks(res, img_metas[idx]['img_shape'][0], img_metas[idx]['img_shape'][1]) for idx, res in enumerate(s_rs)]
-        teacher_info["det_bboxes"] = det_like_segm if det_like_segm[0].shape != 0 else det_bboxes
-        teacher_info["det_labels"] = cls_like_segm if cls_like_segm[0].shape != 0 else det_labels
+        teacher_info["det_bboxes"] = det_like_segm if det_like_segm[0].shape[0] != 0 else det_bboxes
+        teacher_info["det_labels"] = cls_like_segm if det_like_segm[0].shape[0] != 0 else det_labels
         teacher_info["segm_results"] = segm_res
         teacher_info["transform_matrix"] = [
             torch.from_numpy(meta["transform_matrix"]).float().to(feat[0][0].device)

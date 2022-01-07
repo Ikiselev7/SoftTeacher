@@ -491,7 +491,7 @@ custom_hooks = [
 ]
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-load_from = '/content/drive/MyDrive/sartorius/swin_base_cats_coco_tune_iou_sampler_ext/epoch_17.pth'
+load_from = '/content/drive/MyDrive/sartorius/swin_base_coco_cats_iou_s/epoch_12.pth'
 resume_from = None
 workflow = [('train', 1)]
 mmdet_base = '../../thirdparty/mmdetection/configs/_base_'
