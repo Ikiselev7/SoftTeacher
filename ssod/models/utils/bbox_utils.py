@@ -236,7 +236,18 @@ class Transform2D:
 
 
 def filter_invalid(bbox, label=None, score=None, mask=None, thr=0.0, min_size=0):
-    if score is not None:
+    if score is not None and label is not None and isinstance(thr, list):
+        sc_lb = np.hstack([score.reshape(-1, 1), label.reshape(-1, 1)])
+        valid = np.zeros_like(sc_lb[:, 0] > 0)
+        for cls, th in enumerate(thr):
+            valid = np.logical_or(valid, np.logical_and(sc_lb[:, 0] > thr, sc_lb[:, 1] == cls))
+
+        bbox = bbox[valid]
+        if label is not None:
+            label = label[valid]
+        if mask is not None:
+            mask = BitmapMasks(mask.masks[valid.cpu().numpy()], mask.height, mask.width)
+    if score is not None and not isinstance(thr, list):
         valid = score > thr
         bbox = bbox[valid]
         if label is not None:
